@@ -148,22 +148,60 @@ const getcurrentuser=async_Handler(async(req,res)=>{
         new apiresponse(200,"user fetched successfully",req.user)
     )
 })
-const getordrerhistory=async_Handler(async(req,res)=>{
-    const user=await User.aggregate([
-        {$match:{_id:new mongoose.Types.ObjectId(req.user._id)}},
+const getordrerhistory = async_Handler(async (req, res) => {
+    const userOrders = await User.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
         {
-            $lookup:{
-                from: "orders",
-                localField: "orderHistory",
-                foreignField: "_id",
+            $lookup: {
+                from: "orders", // Reference the `orders` collection
+                localField: "orderHistory", // Field in User schema
+                foreignField: "_id", // Field in Order schema
                 as: "orderHistory",
             }
+        },
+        { $unwind: "$orderHistory" }, // Unwind the orderHistory array
+        { $unwind: "$orderHistory.items" }, // Unwind the items array to work with each item individually
+        {
+            $lookup: {
+                from: "foods", // Reference the `foods` collection
+                localField: "orderHistory.items.item", // Field in Order's items array (item ID)
+                foreignField: "_id", // Field in Food schema
+                as: "orderHistory.items.foodDetails", // Populates the Food details in the item
+            }
+        },
+        { $unwind: "$orderHistory.items.foodDetails" }, // Unwind to get a single foodDetails object per item
+        {
+            $group: {
+                _id: "$_id", // Group back by user ID
+                orderHistory: {
+                    $push: {
+                        _id: "$orderHistory._id", // Order ID
+                        orderedby: "$orderHistory.orderedby", // Ordered by
+                        items: {
+                            item: "$orderHistory.items.item", // Item ID
+                            quantity: "$orderHistory.items.quantity", // Quantity of the item
+                            foodDetails: "$orderHistory.items.foodDetails" // Associated Food details
+                        },
+                        totalAmount: "$orderHistory.totalAmount", // Total amount of the order
+                        deliveryAddress: "$orderHistory.deliveryAddress", // Delivery address
+                        status: "$orderHistory.status", // Order status
+                        createdAt: "$orderHistory.createdAt" // Order creation timestamp
+                    }
+                }
+            }
         }
-    ])
+    ]);
+
+    // Check if the user was found
+    if (!userOrders.length) {
+        return res.status(404).json(new apiresponse(404, "User not found"));
+    }
+
     return res.status(200).json(
-        new apiresponse(200,"watch history fetched successfully",user[0].orderHistory)
-    )
-})
+        new apiresponse(200, "Order history fetched successfully", userOrders[0].orderHistory)
+    );
+});
+
 export {
     registerUser,
     loginUser,
