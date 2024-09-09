@@ -50,19 +50,29 @@ const updateorderstatus=async_Handler(async (req,res)=>{
             new apiresponse(200,"Order updated successfully",order)
         )
 })
-const getpendingorders=async_Handler(async (req,res)=>{
+const getpendingorders = async_Handler(async (req, res) => {
     const orders = await Order.find({ status: 'Pending' })
-    if(!orders){
+        .populate({
+            path: 'items.item',
+            model: 'Food', 
+        });
+
+    if (!orders || orders.length === 0) {
         return res.status(404).json(
-            new apiresponse(404,"No pending orders found")
-        )}
-        return res.status(201).json(
-            new apiresponse(200,"orders fetched success",orders)
-        )
-})
+            new apiresponse(404, "No pending orders found")
+        );
+    }
+
+    return res.status(200).json(
+        new apiresponse(200, "Pending orders fetched successfully", orders)
+    );
+});
 const specificorders=async_Handler(async (req,res)=>{
     const { id } = req.params
-    const orders = await Order.findById(id)
+    const orders = await Order.findById(id).populate({
+        path: 'items.item',
+        model: 'Food', 
+    });
     if(!orders){
         return res.status(404).json(
             new apiresponse(404,"order not found")
