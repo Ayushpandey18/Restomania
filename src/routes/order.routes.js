@@ -7,6 +7,6 @@ import verifyJWT from "../middlewares/Auth.middleware.js";
 const orderRouter=Router();
 orderRouter.route("/placeorder").post(verifyJWT,createorder);
 orderRouter.route("/update-order-status").put(updateorderstatus);
-orderRouter.route("/get-pending-orders/:id").get(getpendingorders);
+orderRouter.route("/get-pending-orders").get(getpendingorders);
 orderRouter.route("/get-specific-order/:id").get(specificorders);
 export default orderRouter;
